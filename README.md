@@ -14,7 +14,7 @@ The source contains two additional measured joining strokes for `May` and `and`.
 
 ## STL and 3MF
 
-A GitHub Actions [build workflow](../../actions/workflows/build.yml) renders the source using Google's Great Vibes font, checks that the STL is **one watertight mesh** within the 180 × 180 mm build area, and converts it to a portable 3MF.
+A GitHub Actions [build workflow](../../actions/workflows/build.yml) renders the source using Google's Great Vibes font, measures and automatically welds small disconnected gaps (no more than 1.5 mm), checks that the repaired STL is **one watertight mesh** within the 180 × 180 mm build area, and converts it to a portable 3MF.
 
 If the build passes, both files are committed into [`generated/`](generated/) and bundled in the downloadable **script-sign-models** GitHub Actions artifact. If the connectivity check fails, the workflow stops rather than publishing a misleading “one-piece” model.
 
