@@ -1,0 +1,65 @@
+name: Build A1 Mini script sign
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'makerworld_sign_v5_measured.scad'
+      - 'tools/verify_and_package.py'
+      - '.github/workflows/build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install OpenSCAD and the exact Great Vibes font
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y openscad fontconfig
+          mkdir -p "$HOME/.local/share/fonts"
+          curl --fail --location --retry 3 \
+            'https://raw.githubusercontent.com/google/fonts/main/ofl/greatvibes/GreatVibes-Regular.ttf' \
+            --output "$HOME/.local/share/fonts/GreatVibes-Regular.ttf"
+          fc-cache -f
+          fc-match -f '%{family}\n' 'Great Vibes' | tee /tmp/selected-font
+          grep -qx 'Great Vibes' /tmp/selected-font
+
+      - name: Render STL with OpenSCAD
+        run: |
+          mkdir -p generated
+          openscad -o generated/repaired-script-sign.stl makerworld_sign_v5_measured.scad
+
+      - name: Validate one connected, watertight mesh and create 3MF
+        run: |
+          python -m pip install --disable-pip-version-check trimesh
+          python tools/verify_and_package.py \
+            generated/repaired-script-sign.stl \
+            generated/repaired-script-sign.3mf
+
+      - name: Provide GitHub Actions downloadable files
+        uses: actions/upload-artifact@v4
+        with:
+          name: script-sign-models
+          path: |
+            generated/repaired-script-sign.stl
+            generated/repaired-script-sign.3mf
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Commit STL and 3MF to the repository
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add generated/repaired-script-sign.stl generated/repaired-script-sign.3mf
+          if ! git diff --cached --quiet; then
+            git commit -m 'Publish verified STL and 3MF from Great Vibes source'
+            git push
+          fi
