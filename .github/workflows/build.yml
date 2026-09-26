@@ -6,6 +6,7 @@ on:
     paths:
       - 'makerworld_sign_v5_measured.scad'
       - 'tools/verify_and_package.py'
+      - 'tools/auto_weld.py'
       - '.github/workflows/build.yml'
   workflow_dispatch:
 
@@ -35,11 +36,16 @@ jobs:
       - name: Render STL with OpenSCAD
         run: |
           mkdir -p generated
-          openscad -o generated/repaired-script-sign.stl makerworld_sign_v5_measured.scad
+          openscad -o generated/_raw_sign.stl makerworld_sign_v5_measured.scad
+
+      - name: Measure short disconnected gaps and weld them with OpenSCAD
+        run: |
+          python -m pip install --disable-pip-version-check 'trimesh==4.11.1' 'networkx>=3.1' 'scipy>=1.12'
+          python tools/auto_weld.py generated/_raw_sign.stl generated/_auto_weld.scad
+          openscad -o generated/repaired-script-sign.stl generated/_auto_weld.scad
 
       - name: Validate one connected, watertight mesh and create 3MF
         run: |
-          python -m pip install --disable-pip-version-check 'trimesh==4.11.1' 'networkx>=3.1'
           python tools/verify_and_package.py \
             generated/repaired-script-sign.stl \
             generated/repaired-script-sign.3mf
